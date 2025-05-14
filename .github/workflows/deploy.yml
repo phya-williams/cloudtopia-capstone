@@ -1,0 +1,24 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    paths:
+      - '**.bicep'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep Template
+        run: |
+          az deployment group create \
+            --resource-group CloudTopiaRG \
+            --template-file infrastructure/main.bicep \
+            --parameters storageName=cloudtopiastorage
