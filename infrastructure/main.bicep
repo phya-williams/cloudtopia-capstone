@@ -1,4 +1,5 @@
 param storageName string = 'cloudtopiastorage${uniqueString(resourceGroup().id)}'
+param acrName string = 'cloudtopiaacr'
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: storageName
@@ -10,6 +11,15 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   properties: {}
 }
 
+resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
+  name: acrName
+  location: resourceGroup().location
+  sku: {
+    name: 'Basic'
+  }
+  properties: {}
+}
+
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2022-09-01' = {
   name: 'weather-detector'
   location: resourceGroup().location
@@ -18,7 +28,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2022-09-01'
       {
         name: 'weather'
         properties: {
-          image: '<your-docker-image>'  // Replace this!
+          image: '${acr.properties.loginServer}/weather-simulator:latest'
           resources: {
             requests: {
               cpu: 1
@@ -35,5 +45,17 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2022-09-01'
       }
     ]
     osType: 'Linux'
+    identity: {
+      type: 'SystemAssigned'
+    }
+  }
+}
+
+resource acrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(containerGroup.id, 'AcrPull')
+  properties: {
+    principalId: containerGroup.identity.principalId
+    roleDefinitionId: '/subscriptions/${subscription().subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/4a42b06b-d6b1-45f1-b6ad-d97dca549aba'  // AcrPull role
+    scope: acr.id
   }
 }
