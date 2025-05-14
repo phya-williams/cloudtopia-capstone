@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CloudTopia Weather Dashboard</title>
+  <script>
+    async function fetchWeather() {
+      const response = await fetch('https://<your-storage-account>.blob.core.windows.net/weatherdata/latest_weather.json');
+      const data = await response.json();
+      document.getElementById("weather").innerHTML = JSON.stringify(data, null, 2);
+    }
+    setInterval(fetchWeather, 60000); // auto refresh every 60 seconds
+    window.onload = fetchWeather;
+  </script>
+</head>
+<body>
+  <h1>🌦️ CloudTopia Weather Dashboard</h1>
+  <pre id="weather">Loading...</pre>
+</body>
+</html>
