@@ -1,7 +1,8 @@
 param storageName string = 'cloudtopiastorage${uniqueString(resourceGroup().id)}'
 param acrName string = 'cloudtopiaacr'
-param containerImage string  // New parameter for the container image
+param containerImage string  // Passed dynamically from GitHub Actions
 
+// Storage Account
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: storageName
   location: resourceGroup().location
@@ -12,6 +13,18 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   properties: {}
 }
 
+// Storage Container for weather logs
+resource weatherContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: '${storageAccount.name}/default/weatherdata'
+  properties: {
+    publicAccess: 'Blob' // Allow public read access for the dashboard
+  }
+  dependsOn: [
+    storageAccount
+  ]
+}
+
+// Azure Container Registry
 resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
   name: acrName
   location: resourceGroup().location
@@ -21,15 +34,19 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
   properties: {}
 }
 
+// Container Instance to simulate weather
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2022-09-01' = {
   name: 'weather-detector'
   location: resourceGroup().location
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     containers: [
       {
         name: 'weather'
         properties: {
-          image: containerImage  // Now using the parameter
+          image: containerImage
           resources: {
             requests: {
               cpu: 1
@@ -46,17 +63,8 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2022-09-01'
       }
     ]
     osType: 'Linux'
-    identity: {
-      type: 'SystemAssigned'
-    }
   }
 }
 
-resource acrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerGroup.id, 'AcrPull')
-  properties: {
-    principalId: containerGroup.identity.principalId
-    roleDefinitionId: '/subscriptions/${subscription().subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/4a42b06b-d6b1-45f1-b6ad-d97dca549aba'  // AcrPull role
-    scope: acr.id
-  }
-}
+// Role Assignment to allow ACI to pull from ACR
+resource acrPul
