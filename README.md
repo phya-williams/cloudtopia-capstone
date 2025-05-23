@@ -1,126 +1,198 @@
-# 🌩️ CloudTopia Weather Detection & Alert System
+# 🌤️ CloudTopia Capstone Deployment Guide
 
-Welcome to the **CloudTopia Capstone Project** — a fully containerized, cloud-based weather detection and alert system for a fictional theme park! Built as part of a Junior Cloud Engineer training program, this system uses Azure services, GitHub Actions, and real-time data to simulate weather events and update a live dashboard.
-
----
-
-## 🔧 Technologies Used
-
-- **Azure Blob Storage**
-- **Azure Container Instances**
-- **Docker + Python**
-- **Bicep (Infrastructure as Code)**
-- **GitHub Actions**
-- **JavaScript + HTML Dashboard**
+This document provides a step-by-step guide to deploy the CloudTopia weather simulation system using GitHub Actions, Azure Bicep, and containerization. You can reuse this guide for any new sandbox or Azure environment.
 
 ---
 
-## 🗂️ Project Structure
+## 📦 What You’ll Deploy
 
-
----
-
-## 🚀 How It Works
-
-1. **Simulator** generates random weather data and uploads it to a blob storage container.
-2. **Azure Container Instance (ACI)** runs the simulator using a Docker image.
-3. **Blob Storage** stores a JSON blob of the latest weather data.
-4. **Dashboard** fetches and displays the latest weather every minute.
-5. **GitHub Actions** deploys infrastructure on Bicep changes.
+1. **Azure Container Registry (ACR)** – Stores your weather simulator container.
+2. **Azure Container Instance (ACI)** – Runs the simulator.
+3. **Azure Storage Account** – Logs weather data.
+4. **Log Analytics + Azure Monitor** – Observes and triggers alerts.
+5. **Infrastructure as Code (Bicep)** – Defines your resources.
+6. **GitHub Actions** – Automates image building and deployment.
 
 ---
 
-## 🔌 Prerequisites
+## 🗂️ GitHub Repo Structure
 
-- Azure Subscription
-- GitHub Account
-- Docker Hub account (to push your Docker image)
+```
+cloudtopia-capstone/
+├── .github/
+│   └── workflows/
+│       ├── deploy.yml          # Deploy infrastructure via Bicep
+│       └── build-and-push.yml # Build Docker image & push to ACR
+├── infrastructure/
+│   └── main.bicep             # Azure Bicep template
+├── weather-simulator/
+│   ├── app.py
+│   └── Dockerfile
+├── dashboard/
+│   └── index.html
+```
 
 ---
 
-## 🛠️ Setup Instructions
+## ✅ Setup Steps (Repeatable)
 
-🌀 CloudTopia Capstone: Weather Detection System Deployment Instructions (ACR Edition)
-✅ 1. Clone the Repository
-bash
-Copy
-Edit
-git clone https://github.com/your-username/cloudtopia-capstone.git
-cd cloudtopia-capstone
+### 1. Sign into Azure
 
-✅ 2. Build and Push Docker Image to Azure Container Registry (ACR)
-🛠️ Make sure you’ve created your ACR:
-bash
-Copy
-Edit
-az acr create --name cloudtopiaacr --resource-group CloudTopiaRG --sku Basic
-🔐 Log in to ACR:
-bash
-Copy
-Edit
-az acr login --name cloudtopiaacr
-🧱 Build and tag your image:
-bash
-Copy
-Edit
-cd weather-simulator
-docker build -t cloudtopiaacr.azurecr.io/weather-simulator:latest .
-📤 Push to ACR:
-bash
-Copy
-Edit
-docker push cloudtopiaacr.azurecr.io/weather-simulator:latest
+```bash
+az login
+az account set --subscription "<Your Subscription ID>"
+```
 
+### 2. Create a Resource Group
 
-✅ 3. Update infrastructure/main.bicep
-Make sure the container image path in your main.bicep is updated to:
+```bash
+az group create --name cloudtopia-rg --location eastus
+```
 
-bicep
-Copy
-Edit
-image: 'cloudtopiaacr.azurecr.io/weather-simulator:latest'
-Also verify that:
+### 3. Create an ACR Registry
 
-You're using a SystemAssigned identity in your container group.
+```bash
+az acr create --name cloudtopiaacr --resource-group cloudtopia-rg --sku Basic --admin-enabled true
+```
 
-You assign the AcrPull role to the container group’s identity (already included in the latest Bicep version).
+### 4. Get ACR Credentials
 
-✅ 4. Set Up GitHub Secrets
-In your GitHub repository:
+```bash
+az acr credential show --name cloudtopiaacr
+```
 
-Go to Settings → Secrets and Variables → Actions → New repository secret.
+Copy `username` and `password` for use in GitHub secrets.
 
-🛡️ Add this secret:
-Name: AZURE_CREDENTIALS
+### 5. Create Azure Service Principal for GitHub
 
-Value: Output of:
+```bash
+az ad sp create-for-rbac --name "cloudtopia-sp" \
+  --sdk-auth \
+  --role contributor \
+  --scopes /subscriptions/<sub-id>/resourceGroups/cloudtopia-rg
+```
 
-bash
-Copy
-Edit
-az ad sp create-for-rbac --name "cloudtopia-deployer" --role contributor --scopes /subscriptions/<sub-id>/resourceGroups/CloudTopiaRG --sdk-auth
-Replace <sub-id> with your actual Azure Subscription ID.
+Copy the full JSON output for use as `AZURE_CREDENTIALS` in GitHub secrets.
 
-✅ 5. Push Your Changes
-bash
-Copy
-Edit
-git add .
-git commit -m "Initial CloudTopia project setup with ACR"
-git push origin main
-Your GitHub Actions pipeline will automatically deploy your infrastructure using the Bicep template.
+---
 
-🌐 Dashboard Access
-Once deployed, go to:
+## 🔐 Set GitHub Secrets
 
-pgsql
-Copy
-Edit
-https://<your-storage-account>.blob.core.windows.net/weatherdata/latest_weather.json
-You can host the dashboard/index.html in any of the following:
+Go to `Settings` → `Secrets and variables` → `Actions`, then add:
 
-Azure Static Web Apps (recommended for auto-updating)
+| Secret Name         | Value                                 |
+| ------------------- | ------------------------------------- |
+| `AZURE_CREDENTIALS` | Output from Service Principal command |
+| `ACR_USERNAME`      | From ACR credentials                  |
+| `ACR_PASSWORD`      | From ACR credentials                  |
+| `ACR_NAME`          | `cloudtopiaacr`                       |
+| `RESOURCE_GROUP`    | `cloudtopia-rg`                       |
 
-GitHub Pages
+---
 
-Local preview (with Live Server in VS Code)
+## 🚀 GitHub Workflows
+
+### `.github/workflows/build-and-push.yml`
+
+```yaml
+name: Build and Push to ACR
+
+on:
+  push:
+    paths:
+      - 'weather-simulator/**'
+      - '.github/workflows/build-and-push.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Log in to ACR
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.ACR_NAME }}.azurecr.io
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+
+    - name: Build and push
+      run: |
+        docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/weather-simulator:latest ./weather-simulator
+        docker push ${{ secrets.ACR_NAME }}.azurecr.io/weather-simulator:latest
+```
+
+### `.github/workflows/deploy.yml`
+
+```yaml
+name: Deploy CloudTopia Infrastructure
+
+on:
+  push:
+    paths:
+      - 'infrastructure/**'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Deploy Bicep
+      run: |
+        az deployment group create \
+          --resource-group ${{ secrets.RESOURCE_GROUP }} \
+          --template-file infrastructure/main.bicep \
+          --parameters containerImage="${{ secrets.ACR_NAME }}.azurecr.io/weather-simulator:latest"
+```
+
+---
+
+## 📦 main.bicep Parameters
+
+Make sure your Bicep file includes this parameter:
+
+```bicep
+param containerImage string
+```
+
+Use it to replace the hardcoded ACR URL inside your `containerGroup` resource.
+
+---
+
+## 🧪 Testing & Monitoring
+
+1. The container instance will start simulating weather.
+2. Logs are written to blob storage.
+3. Set up Azure Monitor to stream logs into Log Analytics.
+4. Define alert rules based on temperature or rain severity.
+
+---
+
+## 🔁 Reusing in Another Sandbox
+
+Just rerun:
+
+```bash
+az login
+az account set --subscription "<your-subscription>"
+az group create --name cloudtopia-rg --location eastus
+az acr create --name cloudtopiaacr --resource-group cloudtopia-rg --sku Basic --admin-enabled true
+az acr update -n cloudtopiaacr --admin-enabled true
+az acr credential show --name cloudtopiaacr
+az ad sp create-for-rbac --name "cloudtopia-sp" --sdk-auth --role contributor --scopes /subscriptions/<sub-id>/resourceGroups/cloudtopia-rg
+```
+
+Then plug new credentials into GitHub secrets and push to GitHub.
+
+---
+
+## 🏁 You're Done!
+
+All infrastructure is deployed and the simulator is running. CloudTopia is live. 🎉
