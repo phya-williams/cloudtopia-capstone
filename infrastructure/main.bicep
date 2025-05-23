@@ -1,5 +1,6 @@
 param storageName string = 'cloudtopiastorage${uniqueString(resourceGroup().id)}'
 param acrName string = 'cloudtopiaacr'
+param containerImage string  // New parameter for the container image
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: storageName
@@ -28,7 +29,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2022-09-01'
       {
         name: 'weather'
         properties: {
-          image: '${acr.properties.loginServer}/weather-simulator:latest'
+          image: containerImage  // Now using the parameter
           resources: {
             requests: {
               cpu: 1
