@@ -1,4 +1,4 @@
-import json, random, os
+import json, random, os, time
 from azure.storage.blob import BlobServiceClient
 
 connect_str = os.getenv('STORAGE_CONNECTION_STRING')
@@ -13,6 +13,9 @@ def generate_weather():
     }
 
 blob_client = blob_service_client.get_blob_client(container=container_name, blob="latest_weather.json")
-data = generate_weather()
-blob_client.upload_blob(json.dumps(data), overwrite=True)
-print("Weather data uploaded:", data)
+
+while True:
+    data = generate_weather()
+    blob_client.upload_blob(json.dumps(data), overwrite=True)
+    print("Weather data uploaded:", data)
+    time.sleep(4)  # wait 4 seconds before next update
