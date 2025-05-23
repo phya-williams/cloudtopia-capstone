@@ -1,58 +1,41 @@
-name: Build Image and Deploy Infrastructure
+name: Build and Deploy CloudTopia Weather Simulator
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 env:
+  RESOURCE_GROUP: your-resource-group-name
+  LOCATION: your-region
   ACR_NAME: cloudtopiaacr
-  IMAGE_NAME: weather-simulator
-  RESOURCE_GROUP: CloudTopiaRG
+  STORAGE_NAME: cloudtopiastorage${{ github.run_id }}  # or generate dynamically as needed
+  CONTAINER_NAME: weather-detector
 
 jobs:
-  build-and-push:
-    name: Build & Push Docker Image to ACR
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: Login to Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Azure ACR Login
-        run: az acr login --name $ACR_NAME
+    - name: Build Docker image
+      run: |
+        az acr login --name $ACR_NAME
+        docker build -t $ACR_NAME.azurecr.io/weather-simulator:latest ./weather-simulator
+        docker push $ACR_NAME.azurecr.io/weather-simulator:latest
 
-      - name: Build and Push Docker Image
-        run: |
-          docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:latest ./weather-simulator
-          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:latest
-
-  deploy-infra:
-    name: Deploy Bicep Infrastructure
-    runs-on: ubuntu-latest
-    needs: build-and-push
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Install Bicep CLI
-        run: az bicep install
-
-      - name: Deploy Bicep Template
-        run: |
-          az deployment group create \
-            --resource-group $RESOURCE_GROUP \
-            --template-file infrastructure/main.bicep \
-            --parameters containerImage="$ACR_NAME.azurecr.io/$IMAGE_NAME:latest"
+    - name: Deploy Bicep Template
+      run: |
+        az deployment group create \
+          --resource-group $RESOURCE_GROUP \
+          --template-file ./infrastructure/main.bicep \
+          --parameters storageName=$STORAGE_NAME \
+                       acrName=$ACR_NAME \
+                       containerImage=$ACR_NAME.azurecr.io/weather-simulator:latest
