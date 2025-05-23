@@ -1,27 +1,44 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>CloudTopia Weather Dashboard</title>
+  <meta charset="UTF-8">
+  <title>🌦️ CloudTopia Weather Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #e0f7fa;
+      color: #004d40;
+      text-align: center;
+      padding: 40px;
+    }
+    pre {
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 20px;
+      display: inline-block;
+      text-align: left;
+      font-size: 1.2em;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+  </style>
   <script>
     async function fetchWeather() {
       try {
         const response = await fetch('https://<your-storage-account>.blob.core.windows.net/weatherdata/latest_weather.json');
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
+        if (!response.ok) throw new Error("Data not found.");
         const data = await response.json();
-        document.getElementById("weather").innerHTML = JSON.stringify(data, null, 2);
+        document.getElementById("weather").textContent = JSON.stringify(data, null, 2);
       } catch (error) {
-        document.getElementById("weather").innerHTML = "Error fetching weather data.";
-        console.error("Fetch error:", error);
+        document.getElementById("weather").textContent = "⚠️ Unable to fetch data: " + error.message;
       }
     }
-    setInterval(fetchWeather, 4000); // auto refresh every 4 seconds
+
+    setInterval(fetchWeather, 4000); // Refresh every 4 seconds
     window.onload = fetchWeather;
   </script>
 </head>
 <body>
-  <h1>🌦️ CloudTopia Weather Dashboard</h1>
-  <pre id="weather">Loading...</pre>
+  <h1>☁️ CloudTopia Weather Dashboard</h1>
+  <pre id="weather">Loading weather data...</pre>
 </body>
 </html>
