@@ -1,8 +1,8 @@
 param location string = resourceGroup().location
 
-// Storage Account
+// Storage Account for static website and logs
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-  name: 'cloudtpstatic01'  // 24-char lowercase no-hyphen
+  name: 'cloudtpstatic01'  // must be globally unique, 3-24 lowercase letters/numbers, no hyphens
   location: location
   sku: {
     name: 'Standard_LRS'
@@ -13,27 +13,35 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
 }
 
-// Static Website Configuration
+// Enable Static Website hosting on the Storage Account
 resource staticWebsite 'Microsoft.Storage/storageAccounts/staticWebsite@2022-09-01' = {
   name: '${storageAccount.name}/default'
-  dependsOn: [storageAccount]
+  dependsOn: [
+    storageAccount
+  ]
   properties: {
     indexDocument: 'index.html'
     error404Document: 'index.html'
   }
 }
 
-// Web dashboard upload (from GitHub)
+// Upload dashboard HTML to the $web container using an Azure CLI Deployment Script
 resource uploadDashboardScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   name: 'uploadDashboard'
   location: location
   kind: 'AzureCLI'
+  dependsOn: [
+    staticWebsite
+  ]
   properties: {
     azCliVersion: '2.52.0'
     timeout: 'PT10M'
     retentionInterval: 'P1D'
     scriptContent: '''
+      # Download index.html from GitHub
       curl -L -o index.html https://raw.githubusercontent.com/phya-williams/cloudtopia-capstone/main/dashboard/index.html
+      
+      # Upload to the static website container ($web)
       az storage blob upload \
         --account-name ${storageAccount.name} \
         --container-name '$web' \
@@ -42,27 +50,29 @@ resource uploadDashboardScript 'Microsoft.Resources/deploymentScripts@2020-10-01
         --content-type 'text/html' \
         --overwrite
     '''
-    forceUpdateTag: '1'
-    cleanupPreference: 'OnSuccess'
+    forceUpdateTag: '1'  // Force re-run on each deployment (update if needed)
+    cleanupPreference: 'OnSuccess'  // Clean up resources after success
   }
-  dependsOn: [
-    staticWebsite
-  ]
 }
 
-// Blob container for logs
+// Blob container for storing weather logs (public access set to Blob)
 resource weatherLogsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
   name: '${storageAccount.name}/default/weather-logs'
+  dependsOn: [
+    storageAccount
+  ]
   properties: {
     publicAccess: 'Blob'
   }
-  dependsOn: [storageAccount]
 }
 
-// Container Instance to write multiple logs
+// Azure Container Instance that writes multiple weather log blobs
 resource logWriterContainer 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
   name: 'cloudtopialogwriter'
   location: location
+  dependsOn: [
+    weatherLogsContainer
+  ]
   properties: {
     osType: 'Linux'
     restartPolicy: 'Never'
@@ -80,17 +90,17 @@ resource logWriterContainer 'Microsoft.ContainerInstance/containerGroups@2023-05
           command: [
             '/bin/sh',
             '-c',
-            'for i in $(seq 1 5); do ' +
-            'ts=$(date -u -d "$i minute ago" +"%Y-%m-%dT%H:%M:%SZ"); ' +
-            'echo "{\"timestamp\":\"$ts\",\"location\":\"Zone $i\",\"temperature_c\":$((20 + $i)),' +
-            '\"humidity_percent\":$((60 + $i)),\"wind_kph\":$((10 + $i)),\"alert\":\"Test Alert $i\"}" > sample-log-$i.json; ' +
-            'az storage blob upload --account-name ${storageAccount.name} --container-name weather-logs --name sample-log-$i.json --file sample-log-$i.json --overwrite; ' +
-            'done; sleep 300'
+            '''
+            for i in $(seq 1 5); do
+              ts=$(date -u -d "$i minute ago" +"%Y-%m-%dT%H:%M:%SZ");
+              echo "{\"timestamp\":\"$ts\",\"location\":\"Zone $i\",\"temperature_c\":$((20 + i)),\"humidity_percent\":$((60 + i)),\"wind_kph\":$((10 + i)),\"alert\":\"Test Alert $i\"}" > sample-log-$i.json;
+              az storage blob upload --account-name ${storageAccount.name} --container-name weather-logs --name sample-log-$i.json --file sample-log-$i.json --overwrite;
+            done;
+            sleep 300
+            '''
           ]
         }
       }
     ]
   }
-  dependsOn: [weatherLogsContainer]
 }
-
