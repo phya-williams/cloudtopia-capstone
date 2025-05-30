@@ -6,8 +6,8 @@ on:
       - main
 
 env:
-  RESOURCE_GROUP: your-resource-group-name
-  LOCATION: your-region
+  RESOURCE_GROUP: 1-e4ebedde-playground-sandbox
+  LOCATION: westus
   ACR_NAME: cloudtopiaacr
   STORAGE_NAME: cloudtopiastorage${{ github.run_id }}  # or generate dynamically as needed
   CONTAINER_NAME: weather-detector
