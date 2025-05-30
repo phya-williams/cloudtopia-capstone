@@ -1,6 +1,19 @@
-param location string = resourceGroup().location
-param storageAccountName string = 'cloudtpstatic01'  // must be unique, 3-24 lowercase letters/numbers, no hyphens
-param containerRegistryName string = 'cloudtpacr'    // must be unique, lowercase, 5-50 chars
+az deployment group create \
+  --resource-group 1-84c05605-playground-sandbox \
+  --template-file main.bicep
+
+
+param location string = 'eastus'
+param storageAccountName string = 'cloudtopiablob2025'
+param containerName string = 'weatherdata'
+param functionAppName string = 'cloudtopia-weather-fuctions'
+
+param vnetName string = 'cloudtopia-vnet'
+param subnetName string = 'weather-subnet'
+param vnetAddressPrefix string = '10.0.0.0/16'
+param subnetAddressPrefix string = '10.0.0.0/24'
+
+var nsgName = '${vnetName}-nsg'
 
 // Storage Account
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
@@ -10,69 +23,103 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     name: 'Standard_LRS'
   }
   kind: 'StorageV2'
-  properties: {
-    accessTier: 'Hot'
-  }
+  properties: {}
 }
 
-// Blob container #1
-resource blobContainer1 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
-  name: '${storageAccount.name}/default/container1'
+// Blob Container
+resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: 'logs'
   properties: {
     publicAccess: 'None'
   }
-  dependsOn: [
-    storageAccount
-  ]
 }
 
-// Blob container #2
-resource blobContainer2 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
-  name: '${storageAccount.name}/default/container2'
+// Blob Container 2
+resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: 'weather-data'
   properties: {
     publicAccess: 'None'
   }
-  dependsOn: [
-    storageAccount
-  ]
 }
 
-// Azure Container Registry (ACR)
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-01-01' = {
-  name: containerRegistryName
-  location: location
-  sku: {
-    name: 'Basic'
-  }
-  properties: {
-    adminUserEnabled: true
-  }
-}
-
-// Container Instance
-resource containerInstance 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
-  name: 'cloudtop-containerinstance'
+// Network Security Group
+resource nsg 'Microsoft.Network/networkSecurityGroups@2022-07-01' = {
+  name: nsgName
   location: location
   properties: {
-    osType: 'Linux'
-    restartPolicy: 'Never'
-    containers: [
+    securityRules: [
       {
-        name: 'mycontainer'
+        name: 'Allow-HTTP'
         properties: {
-          image: '${containerRegistry.loginServer}/myimage:latest'  // replace with your image name
-          resources: {
-            requests: {
-              cpu: 1.0
-              memoryInGB: 1.5
-            }
-          }
-          // You can add environment variables, commands, etc. here if needed
+          priority: 100
+          direction: 'Inbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '80'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
         }
       }
     ]
   }
-  dependsOn: [
-    containerRegistry
-  ]
+}
+
+// Virtual Network + Subnet with NSG
+resource vnet 'Microsoft.Network/virtualNetworks@2022-07-01' = {
+  name: vnetName
+  location: location
+  properties: {
+    addressSpace: {
+      addressPrefixes: [vnetAddressPrefix]
+    }
+    subnets: [
+      {
+        name: subnetName
+        properties: {
+          addressPrefix: subnetAddressPrefix
+          networkSecurityGroup: {
+            id: nsg.id
+          }
+        }
+      }
+    ]
+  }
+}
+
+// App Service Plan (Consumption)
+resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
+  name: '${functionAppName}-plan'
+  location: location
+  sku: {
+    name: 'Y1'
+    tier: 'Dynamic'
+  }
+  kind: 'functionapp'
+}
+
+// Function App
+resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
+  name: functionAppName
+  location: location
+  kind: 'functionapp'
+  properties: {
+    serverFarmId: appServicePlan.id
+    siteConfig: {
+      appSettings: [
+        {
+          name: 'AzureWebJobsStorage'
+          value: storageAccount.properties.primaryEndpoints.blob
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'powershell'
+        }
+      ]
+    }
+  }
 }
