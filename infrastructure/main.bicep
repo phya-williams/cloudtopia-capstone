@@ -1,67 +1,90 @@
-@description('Name of the storage account')
-param cloudtopiaStorageName string
-
-@description('Name of the container registry')
-param cloudtopiaAcrName string
-
-@description('Full container image name including tag (e.g., acrName.azurecr.io/image:tag)')
-param cloudtopiaContainerImage string
+param location string = resourceGroup().location
+param storageAccountName string
+param containerName string = 'mycontainer'
+param acrName string
+param containerInstanceName string
+param staticWebAppName string
+param sku string = 'Standard_LRS'
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-  name: cloudtopiaStorageName
-  location: resourceGroup().location
+  name: storageAccountName
+  location: location
   sku: {
-    name: 'Standard_LRS'
+    name: sku
   }
   kind: 'StorageV2'
-  properties: {}
+  properties: {
+    accessTier: 'Hot'
+  }
 }
 
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2021-09-01' = {
-  name: '${storageAccount.name}/default'
-  parent: storageAccount
-}
-
-resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
-  name: 'weather-logs'
-  parent: blobService
+resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: '${storageAccount.name}/default/${containerName}'
   properties: {
     publicAccess: 'None'
   }
 }
 
-resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
-  name: 'weather-simulator-group'
-  location: resourceGroup().location
+resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
+  name: acrName
+  location: location
+  sku: {
+    name: 'Basic'
+  }
   properties: {
-    osType: 'Linux'
-    restartPolicy: 'OnFailure'
+    adminUserEnabled: true
+  }
+}
+
+resource containerInstance 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
+  name: containerInstanceName
+  location: location
+  properties: {
     containers: [
       {
-        name: 'weather-simulator'
+        name: 'mycontainer'
         properties: {
-          image: cloudtopiaContainerImage
+          image: 'mcr.microsoft.com/azuredocs/aci-helloworld'
           resources: {
             requests: {
-              cpu: 1
+              cpu: 1.0
               memoryInGb: 1.5
             }
           }
-          environmentVariables: [
+          ports: [
             {
-              name: 'AZURE_STORAGE_ACCOUNT'
-              value: cloudtopiaStorageName
+              port: 80
             }
           ]
         }
       }
     ]
-    imageRegistryCredentials: [
-      {
-        server: '${cloudtopiaAcrName}.azurecr.io'
-        username: cloudtopiaAcrName
-        password: 'CloudTopiaWeather1!' // Replace with secure method in production
-      }
-    ]
+    osType: 'Linux'
+    ipAddress: {
+      type: 'Public'
+      ports: [
+        {
+          protocol: 'tcp'
+          port: 80
+        }
+      ]
+    }
+  }
+}
+
+resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
+  name: staticWebAppName
+  location: location
+  sku: {
+    name: 'Free'
+    tier: 'Free'
+  }
+  properties: {
+    repositoryUrl: 'https://github.com/cloudtopia-capstone' // Replace with your repo
+    branch: 'main'
+    buildProperties: {
+      appLocation: '/dashboard/index.html'
+      outputLocation: 'build'
+    }
   }
 }
