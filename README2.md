@@ -3,10 +3,10 @@ Containerized APP (manual)
 export RESOURCE_GROUP=$(az group list --query "[0].name" -o tsv)
 
 # Create container registry
-az acr create --resource-group RESOURCE_GROUP --name cloudtopiaregistry --sku Basic --admin-enabled true
+az acr create --resource-group $RESOURCE_GROUP --name cloudtopiaregistry --sku Basic --admin-enabled true
 
 # Create container app environment
-az containerapp env create --name cloudtopia-env --resource-group RESOURCE_GROUP --location eastus
+az containerapp env create --name cloudtopia-env --resource-group $RESOURCE_GROUP --location eastus
 
 # Build and push image to Azure Container Registry
 az acr build --registry cloudtopiaregistry --image cloudtopia-weather:latest .
@@ -14,7 +14,7 @@ az acr build --registry cloudtopiaregistry --image cloudtopia-weather:latest .
 # Deploy to Container Apps
 az containerapp create \
   --name cloudtopia-dashboard \
-  --resource-group RESOURCE_GROUP \
+  --resource-group $RESOURCE_GROUP \
   --environment cloudtopia-env \
   --image cloudtopiaregistry.azurecr.io/cloudtopia-weather:latest \
   --target-port 5000 \
