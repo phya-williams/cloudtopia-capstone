@@ -1,14 +1,14 @@
 @description('Name of the storage account')
-param storageName string
+param cloudtopiaStorageName string
 
 @description('Name of the container registry')
-param acrName string
+param cloudtopiaAcrName string
 
-@description('Full image name including tag (e.g., acrName.azurecr.io/image:tag)')
-param containerImage string
+@description('Full container image name including tag (e.g., acrName.azurecr.io/image:tag)')
+param cloudtopiaContainerImage string
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-  name: storageName
+  name: cloudtopiaStorageName
   location: resourceGroup().location
   sku: {
     name: 'Standard_LRS'
@@ -18,7 +18,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
 }
 
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2021-09-01' = {
-  name: 'default'
+  name: '${storageAccount.name}/default'
   parent: storageAccount
 }
 
@@ -40,7 +40,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'weather-simulator'
         properties: {
-          image: containerImage
+          image: cloudtopiaContainerImage
           resources: {
             requests: {
               cpu: 1
@@ -50,7 +50,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
           environmentVariables: [
             {
               name: 'AZURE_STORAGE_ACCOUNT'
-              value: storageName
+              value: cloudtopiaStorageName
             }
           ]
         }
@@ -58,9 +58,9 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
     ]
     imageRegistryCredentials: [
       {
-        server: '${acrName}.azurecr.io'
-        username: acrName
-        password: 'CloudTopiaWeather1!' // sandbox use only
+        server: '${cloudtopiaAcrName}.azurecr.io'
+        username: cloudtopiaAcrName
+        password: 'CloudTopiaWeather1!' // Replace with secure method in production
       }
     ]
   }
