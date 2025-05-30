@@ -78,30 +78,14 @@ resource logWriterContainer 'Microsoft.ContainerInstance/containerGroups@2023-05
             }
           }
           command: [
-            "/bin/sh"
-            "-c"
-            '''
-            for i in $(seq 1 5); do
-              ts=$(date -u -d "$i minute ago" +"%Y-%m-%dT%H:%M:%SZ")
-              echo "{
-                \\"timestamp\\": \\"$ts\\",
-                \\"location\\": \\"Zone $i\\",
-                \\"temperature_c\\": $((20 + $i)),
-                \\"humidity_percent\\": $((60 + $i)),
-                \\"wind_kph\\": $((10 + $i)),
-                \\"alert\\": \\"Test Alert $i\\"
-              }" > sample-log-$i.json
-
-              az storage blob upload \
-                --account-name ${storageAccount.name} \
-                --container-name weather-logs \
-                --name sample-log-$i.json \
-                --file sample-log-$i.json \
-                --overwrite
-            done
-
-            sleep 300
-            '''
+            '/bin/sh',
+            '-c',
+            'for i in $(seq 1 5); do ' +
+            'ts=$(date -u -d "$i minute ago" +"%Y-%m-%dT%H:%M:%SZ"); ' +
+            'echo "{\"timestamp\":\"$ts\",\"location\":\"Zone $i\",\"temperature_c\":$((20 + $i)),' +
+            '\"humidity_percent\":$((60 + $i)),\"wind_kph\":$((10 + $i)),\"alert\":\"Test Alert $i\"}" > sample-log-$i.json; ' +
+            'az storage blob upload --account-name ${storageAccount.name} --container-name weather-logs --name sample-log-$i.json --file sample-log-$i.json --overwrite; ' +
+            'done; sleep 300'
           ]
         }
       }
@@ -109,3 +93,4 @@ resource logWriterContainer 'Microsoft.ContainerInstance/containerGroups@2023-05
   }
   dependsOn: [weatherLogsContainer]
 }
+
