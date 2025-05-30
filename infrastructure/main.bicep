@@ -2,7 +2,7 @@ param location string = resourceGroup().location
 
 // Storage Account
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-  name: 'cloudtopiastatic${uniqueString(resourceGroup().id)}'
+  name: 'cloudtopiastatic-pw'
   location: location
   sku: {
     name: 'Standard_LRS'
