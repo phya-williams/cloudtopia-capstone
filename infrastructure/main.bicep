@@ -1,6 +1,12 @@
+az deployment group create \
+  --resource-group 1-84c05605-playground-sandbox \
+  --template-file main.bicep
+
+
 param location string = 'eastus'
 param storageAccountName string = 'cloudtopiablob2025'
 param containerName string = 'weatherdata'
+param functionAppName string = 'cloudtopia-weather-fuctions'
 
 param vnetName string = 'cloudtopia-vnet'
 param subnetName string = 'weather-subnet'
@@ -20,26 +26,12 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   properties: {}
 }
 
-// Blob Container #1 - logs
-resource blobContainerLogs 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: '${storageAccount.name}/default/logs'
+// Blob Container
+resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+  name: '${storageAccount.name}/default/${containerName}'
   properties: {
     publicAccess: 'None'
   }
-  dependsOn: [
-    storageAccount
-  ]
-}
-
-// Blob Container #2 - weather-data
-resource blobContainerWeatherData 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: '${storageAccount.name}/default/weather-data'
-  properties: {
-    publicAccess: 'None'
-  }
-  dependsOn: [
-    storageAccount
-  ]
 }
 
 // Network Security Group
@@ -87,60 +79,39 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-07-01' = {
   }
 }
 
-// Container Instance
-resource containerInstance 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
-  name: 'weather-containerinstance'
+// App Service Plan (Consumption)
+resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
+  name: '${functionAppName}-plan'
   location: location
+  sku: {
+    name: 'Y1'
+    tier: 'Dynamic'
+  }
+  kind: 'functionapp'
+}
+
+// Function App
+resource functionApp 'Microsoft.Web/sites@2022-03-01' = {
+  name: functionAppName
+  location: location
+  kind: 'functionapp'
   properties: {
-    osType: 'Linux'
-    restartPolicy: 'Always'
-    ipAddress: {
-      type: 'Public'  // Change to 'Private' if you want to use VNet integration (requires subnetId below)
-      ports: [
+    serverFarmId: appServicePlan.id
+    siteConfig: {
+      appSettings: [
         {
-          protocol: 'Tcp'
-          port: 80
+          name: 'AzureWebJobsStorage'
+          value: storageAccount.properties.primaryEndpoints.blob
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'powershell'
         }
       ]
     }
-    containers: [
-      {
-        name: 'weatherapp'
-        properties: {
-          image: 'mcr.microsoft.com/azuredocs/aci-helloworld'  // Replace with your container image
-          resources: {
-            requests: {
-              cpu: 1.0
-              memoryInGB: 1.5
-            }
-          }
-          ports: [
-            {
-              port: 80
-            }
-          ]
-          environmentVariables: [
-            {
-              name: 'STORAGE_ACCOUNT_NAME'
-              value: storageAccount.name
-            }
-            {
-              name: 'CONTAINER_NAME'
-              value: containerName
-            }
-          ]
-        }
-      }
-    ]
-    subnetIds: [
-      {
-        id: resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, subnetName)
-      }
-    ]
   }
-  dependsOn: [
-    vnet
-    blobContainerLogs
-    blobContainerWeatherData
-  ]
 }
