@@ -1,8 +1,10 @@
 param location string = resourceGroup().location
+param storageAccountName string = 'cloudtpstatic01'  // must be unique, 3-24 lowercase letters/numbers, no hyphens
+param containerRegistryName string = 'cloudtpacr'    // must be unique, lowercase, 5-50 chars
 
-// Storage Account for static website and logs
+// Storage Account
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-  name: 'cloudtpstatic01'  // must be globally unique, 3-24 lowercase letters/numbers, no hyphens
+  name: storageAccountName
   location: location
   sku: {
     name: 'Standard_LRS'
@@ -13,94 +15,64 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
 }
 
-// Enable Static Website hosting on the Storage Account
-resource staticWebsite 'Microsoft.Storage/storageAccounts/staticWebsite@2022-09-01' = {
-  name: '${storageAccount.name}/default'
+// Blob container #1
+resource blobContainer1 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
+  name: '${storageAccount.name}/default/container1'
+  properties: {
+    publicAccess: 'None'
+  }
   dependsOn: [
     storageAccount
   ]
-  properties: {
-    indexDocument: 'index.html'
-    error404Document: 'index.html'
-  }
 }
 
-// Upload dashboard HTML to the $web container using an Azure CLI Deployment Script
-resource uploadDashboardScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
-  name: 'uploadDashboard'
-  location: location
-  kind: 'AzureCLI'
-  dependsOn: [
-    staticWebsite
-  ]
+// Blob container #2
+resource blobContainer2 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
+  name: '${storageAccount.name}/default/container2'
   properties: {
-    azCliVersion: '2.52.0'
-    timeout: 'PT10M'
-    retentionInterval: 'P1D'
-    scriptContent: '''
-      # Download index.html from GitHub
-      curl -L -o index.html https://raw.githubusercontent.com/phya-williams/cloudtopia-capstone/main/dashboard/index.html
-      
-      # Upload to the static website container ($web)
-      az storage blob upload \
-        --account-name ${storageAccount.name} \
-        --container-name '$web' \
-        --name index.html \
-        --file index.html \
-        --content-type 'text/html' \
-        --overwrite
-    '''
-    forceUpdateTag: '1'  // Force re-run on each deployment (update if needed)
-    cleanupPreference: 'OnSuccess'  // Clean up resources after success
+    publicAccess: 'None'
   }
-}
-
-// Blob container for storing weather logs (public access set to Blob)
-resource weatherLogsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
-  name: '${storageAccount.name}/default/weather-logs'
   dependsOn: [
     storageAccount
   ]
+}
+
+// Azure Container Registry (ACR)
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-01-01' = {
+  name: containerRegistryName
+  location: location
+  sku: {
+    name: 'Basic'
+  }
   properties: {
-    publicAccess: 'Blob'
+    adminUserEnabled: true
   }
 }
 
-// Azure Container Instance that writes multiple weather log blobs
-resource logWriterContainer 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
-  name: 'cloudtopialogwriter'
+// Container Instance
+resource containerInstance 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
+  name: 'cloudtop-containerinstance'
   location: location
-  dependsOn: [
-    weatherLogsContainer
-  ]
   properties: {
     osType: 'Linux'
     restartPolicy: 'Never'
     containers: [
       {
-        name: 'log-writer'
+        name: 'mycontainer'
         properties: {
-          image: 'mcr.microsoft.com/azure-cli'
+          image: '${containerRegistry.loginServer}/myimage:latest'  // replace with your image name
           resources: {
             requests: {
               cpu: 1.0
               memoryInGB: 1.5
             }
           }
-          command: [
-            '/bin/sh',
-            '-c',
-            '''
-            for i in $(seq 1 5); do
-              ts=$(date -u -d "$i minute ago" +"%Y-%m-%dT%H:%M:%SZ");
-              echo "{\"timestamp\":\"$ts\",\"location\":\"Zone $i\",\"temperature_c\":$((20 + i)),\"humidity_percent\":$((60 + i)),\"wind_kph\":$((10 + i)),\"alert\":\"Test Alert $i\"}" > sample-log-$i.json;
-              az storage blob upload --account-name ${storageAccount.name} --container-name weather-logs --name sample-log-$i.json --file sample-log-$i.json --overwrite;
-            done;
-            sleep 300
-            '''
-          ]
+          // You can add environment variables, commands, etc. here if needed
         }
       }
     ]
   }
+  dependsOn: [
+    containerRegistry
+  ]
 }
