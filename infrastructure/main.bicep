@@ -1,16 +1,14 @@
 param location string = resourceGroup().location
-param storageAccountName string
-param containerName string = 'mycontainer'
-param acrName string
-param containerInstanceName string
-param staticWebAppName string
-param sku string = 'Standard_LRS'
+param cloudtopiaStorageName string
+param cloudtopiaContainerName string = 'data'
+param cloudtopiaAcrName string
+param cloudtopiaContainerInstanceName string
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-  name: storageAccountName
+  name: cloudtopiaStorageName
   location: location
   sku: {
-    name: sku
+    name: 'Standard_LRS'
   }
   kind: 'StorageV2'
   properties: {
@@ -19,14 +17,14 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
 }
 
 resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: '${storageAccount.name}/default/${containerName}'
+  name: '${storageAccount.name}/default/${cloudtopiaContainerName}'
   properties: {
     publicAccess: 'None'
   }
 }
 
 resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
-  name: acrName
+  name: cloudtopiaAcrName
   location: location
   sku: {
     name: 'Basic'
@@ -37,12 +35,12 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
 }
 
 resource containerInstance 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
-  name: containerInstanceName
+  name: cloudtopiaContainerInstanceName
   location: location
   properties: {
     containers: [
       {
-        name: 'mycontainer'
+        name: 'cloudtopiacontainer'
         properties: {
           image: 'mcr.microsoft.com/azuredocs/aci-helloworld'
           resources: {
@@ -68,23 +66,6 @@ resource containerInstance 'Microsoft.ContainerInstance/containerGroups@2023-05-
           port: 80
         }
       ]
-    }
-  }
-}
-
-resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
-  name: staticWebAppName
-  location: location
-  sku: {
-    name: 'Free'
-    tier: 'Free'
-  }
-  properties: {
-    repositoryUrl: 'https://github.com/cloudtopia-capstone' // Replace with your repo
-    branch: 'main'
-    buildProperties: {
-      appLocation: '/dashboard/index.html'
-      outputLocation: 'build'
     }
   }
 }
