@@ -18,7 +18,8 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
 }
 
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2021-09-01' = {
-  name: '${storageAccount.name}/default'
+  name: 'default'
+  parent: storageAccount
 }
 
 resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
@@ -59,7 +60,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         server: '${acrName}.azurecr.io'
         username: acrName
-        password: 'CloudTopiaWeather1!' // Use secure method in production
+        password: 'CloudTopiaWeather1!' // sandbox use only
       }
     ]
   }
