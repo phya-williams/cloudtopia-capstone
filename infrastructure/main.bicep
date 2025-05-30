@@ -1,11 +1,19 @@
-param storageName string
-param acrName string
-param containerImage string
-param location string = resourceGroup().location
+// =============================
+// main.bicep - CloudTopia Infrastructure
+// =============================
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+@description('The name of the storage account.')
+param storageName string
+
+@description('The name of the Azure Container Registry.')
+param acrName string
+
+@description('The full image name including tag to use for the container.')
+param containerImage string
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageName
-  location: location
+  location: resourceGroup().location
   sku: {
     name: 'Standard_LRS'
   }
@@ -15,7 +23,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
 }
 
-resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   name: '${storageAccount.name}/default/weatherdata'
   properties: {
     publicAccess: 'None'
@@ -24,7 +32,7 @@ resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/container
 
 resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
   name: acrName
-  location: location
+  location: resourceGroup().location
   sku: {
     name: 'Basic'
   }
@@ -35,7 +43,7 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
 
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
   name: 'cloudtopia-simulator'
-  location: location
+  location: resourceGroup().location
   properties: {
     containers: [
       {
@@ -70,11 +78,5 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
         password: acr.listCredentials().passwords[0].value
       }
     ]
-    diagnostics: {
-      logAnalytics: {
-        workspaceId: '<your-log-analytics-workspace-id>'
-        workspaceKey: '<your-log-analytics-key>'
-      }
-    }
   }
 }
