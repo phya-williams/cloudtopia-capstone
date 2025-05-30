@@ -1,17 +1,9 @@
-// =============================
-// main.bicep - CloudTopia Infrastructure
-// =============================
-
-@description('The name of the storage account.')
 param storageName string
-
-@description('The name of the Azure Container Registry.')
 param acrName string
-
-@description('The full image name including tag to use for the container.')
 param containerImage string
+param githubRepoToken string = ''
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: storageName
   location: resourceGroup().location
   sku: {
@@ -23,14 +15,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
-resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: '${storageAccount.name}/default/weatherdata'
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
   name: acrName
   location: resourceGroup().location
   sku: {
@@ -42,9 +27,10 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
 }
 
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
-  name: 'cloudtopia-simulator'
+  name: 'weather-simulator-container'
   location: resourceGroup().location
   properties: {
+    osType: 'Linux'
     containers: [
       {
         name: 'weather-simulator'
@@ -58,25 +44,30 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
           }
           environmentVariables: [
             {
-              name: 'STORAGE_ACCOUNT'
-              value: storageAccount.name
-            }
-            {
-              name: 'BLOB_CONTAINER'
-              value: 'weatherdata'
+              name: 'AZURE_STORAGE_ACCOUNT'
+              value: storageName
             }
           ]
         }
       }
     ]
-    osType: 'Linux'
-    restartPolicy: 'Always'
     imageRegistryCredentials: [
       {
-        server: '${acr.name}.azurecr.io'
-        username: acr.name
-        password: acr.listCredentials().passwords[0].value
+        server: '${acrName}.azurecr.io'
+        username: listCredentials(containerRegistry.id, containerRegistry.apiVersion).username
+        password: listCredentials(containerRegistry.id, containerRegistry.apiVersion).passwords[0].value
       }
     ]
+    restartPolicy: 'OnFailure'
   }
+}
+
+resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
+  name: '${storageAccount.name}/default/weather-logs'
+  properties: {
+    publicAccess: 'None'
+  }
+  dependsOn: [
+    storageAccount
+  ]
 }
