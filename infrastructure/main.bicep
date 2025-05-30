@@ -2,7 +2,7 @@ param location string = resourceGroup().location
 
 // Storage Account
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-  name: 'cloudtopiastatic-pw'
+  name: 'cloudtpstatic01'  // 24-char lowercase no-hyphen
   location: location
   sku: {
     name: 'Standard_LRS'
@@ -10,14 +10,20 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   kind: 'StorageV2'
   properties: {
     accessTier: 'Hot'
-    staticWebsite: {
-      indexDocument: 'index.html'
-      error404Document: 'index.html'
-    }
   }
 }
 
-// Web dashboard upload
+// Static Website Configuration
+resource staticWebsite 'Microsoft.Storage/storageAccounts/staticWebsite@2022-09-01' = {
+  name: '${storageAccount.name}/default'
+  dependsOn: [storageAccount]
+  properties: {
+    indexDocument: 'index.html'
+    error404Document: 'index.html'
+  }
+}
+
+// Web dashboard upload (from GitHub)
 resource uploadDashboardScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   name: 'uploadDashboard'
   location: location
@@ -40,7 +46,7 @@ resource uploadDashboardScript 'Microsoft.Resources/deploymentScripts@2020-10-01
     cleanupPreference: 'OnSuccess'
   }
   dependsOn: [
-    storageAccount
+    staticWebsite
   ]
 }
 
