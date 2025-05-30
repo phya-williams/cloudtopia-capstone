@@ -1,7 +1,3 @@
-az deployment group create \
-  --resource-group 1-84c05605-playground-sandbox \
-  --template-file main.bicep
-
 
 param location string = 'eastus'
 param storageAccountName string = 'cloudtopiablob2025'
