@@ -1,11 +1,8 @@
 param location string = resourceGroup().location
-param cloudtopiaStorageName string
-param cloudtopiaContainerName string = 'data'
-param cloudtopiaAcrName string
-param cloudtopiaContainerInstanceName string
 
+// Storage account for weather logs + static site
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-  name: cloudtopiaStorageName
+  name: 'cloudtopiastatic${uniqueString(resourceGroup().id)}'
   location: location
   sku: {
     name: 'Standard_LRS'
@@ -13,59 +10,49 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   kind: 'StorageV2'
   properties: {
     accessTier: 'Hot'
-  }
-}
-
-resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-  name: '${storageAccount.name}/default/${cloudtopiaContainerName}'
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
-  name: cloudtopiaAcrName
-  location: location
-  sku: {
-    name: 'Basic'
-  }
-  properties: {
-    adminUserEnabled: true
-  }
-}
-
-resource containerInstance 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
-  name: cloudtopiaContainerInstanceName
-  location: location
-  properties: {
-    containers: [
-      {
-        name: 'cloudtopiacontainer'
-        properties: {
-          image: 'mcr.microsoft.com/azuredocs/aci-helloworld'
-          resources: {
-            requests: {
-              cpu: 1.0
-              memoryInGb: 1.5
-            }
-          }
-          ports: [
-            {
-              port: 80
-            }
-          ]
-        }
-      }
-    ]
-    osType: 'Linux'
-    ipAddress: {
-      type: 'Public'
-      ports: [
-        {
-          protocol: 'tcp'
-          port: 80
-        }
-      ]
+    staticWebsite: {
+      indexDocument: 'index.html'
+      error404Document: 'index.html'
     }
   }
+}
+
+// Upload HTML dashboard via deployment script
+resource uploadDashboardScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
+  name: 'uploadDashboard'
+  location: location
+  kind: 'AzureCLI'
+  properties: {
+    azCliVersion: '2.52.0'
+    timeout: 'PT10M'
+    retentionInterval: 'P1D'
+    scriptContent: '''
+      # Enable static website just in case
+      az storage blob service-properties update \
+        --account-name ${storageAccount.name} \
+        --static-website \
+        --index-document index.html
+
+      # Download HTML file from GitHub
+      curl -L -o index.html https://raw.githubusercontent.com/phya-williams/cloudtopia-capstone/main/dashboard/index.html
+
+      # Upload to $web container
+      az storage blob upload \
+        --account-name ${storageAccount.name} \
+        --container-name '$web' \
+        --name index.html \
+        --file index.html \
+        --content-type 'text/html' \
+        --overwrite
+    '''
+    forceUpdateTag: '1'
+    environmentVariables: []
+    cleanupPreference: 'OnSuccess'
+    identity: {
+      type: 'UserAssigned' // optional, could also be 'SystemAssigned'
+    }
+  }
+  dependsOn: [
+    storageAccount
+  ]
 }
