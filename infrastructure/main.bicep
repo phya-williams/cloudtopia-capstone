@@ -1,7 +1,11 @@
+@description('Name of the storage account')
 param storageName string
+
+@description('Name of the container registry')
 param acrName string
+
+@description('Full image name including tag (e.g., acrName.azurecr.io/image:tag)')
 param containerImage string
-param githubRepoToken string = ''
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: storageName
@@ -10,27 +14,27 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     name: 'Standard_LRS'
   }
   kind: 'StorageV2'
-  properties: {
-    accessTier: 'Hot'
-  }
+  properties: {}
 }
 
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
-  name: acrName
-  location: resourceGroup().location
-  sku: {
-    name: 'Basic'
-  }
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2021-09-01' = {
+  name: '${storageAccount.name}/default'
+}
+
+resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
+  name: 'weather-logs'
+  parent: blobService
   properties: {
-    adminUserEnabled: true
+    publicAccess: 'None'
   }
 }
 
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
-  name: 'weather-simulator-container'
+  name: 'weather-simulator-group'
   location: resourceGroup().location
   properties: {
     osType: 'Linux'
+    restartPolicy: 'OnFailure'
     containers: [
       {
         name: 'weather-simulator'
@@ -38,7 +42,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
           image: containerImage
           resources: {
             requests: {
-              cpu: 1.0
+              cpu: 1
               memoryInGb: 1.5
             }
           }
@@ -54,20 +58,9 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
     imageRegistryCredentials: [
       {
         server: '${acrName}.azurecr.io'
-        username: listCredentials(containerRegistry.id, containerRegistry.apiVersion).username
-        password: listCredentials(containerRegistry.id, containerRegistry.apiVersion).passwords[0].value
+        username: acrName
+        password: 'CloudTopiaWeather1!' // Use secure method in production
       }
     ]
-    restartPolicy: 'OnFailure'
   }
-}
-
-resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-09-01' = {
-  name: '${storageAccount.name}/default/weather-logs'
-  properties: {
-    publicAccess: 'None'
-  }
-  dependsOn: [
-    storageAccount
-  ]
 }
