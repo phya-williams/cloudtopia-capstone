@@ -109,6 +109,8 @@ cd cloudtopia-capstone
 
 ```bash
 # Log in to Azure and ACR
+az deployment group create --resource-group 1-f19e8a67-playground-sandbox --template-file infrastructure/main.bicep
+
 export RESOURCE_GROUP=$(az group list --query "[0].name" -o tsv)
 
 az acr create --resource-group $RESOURCE_GROUP --name cloudtopiaregistry --sku Basic --admin-enabled true
