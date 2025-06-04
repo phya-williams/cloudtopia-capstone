@@ -49,66 +49,6 @@ cd cloudtopia-capstone
 
 ```bash
 # Log in to Azure and ACR
-az login
-az acr login --name cloudtopiaacr
-
-# Set ACR login server name (replace with your unique name if needed)
-ACR_NAME=cloudtopiaacr
-ACR_LOGIN_SERVER=$(az acr show --name $ACR_NAME --query loginServer --output tsv)
-
-# Build & push image
-cd weather-simulator
-# CloudTopia Capstone: Full Deployment Guide (Sandbox-Friendly)
-
-This guide helps you:
-
-1. Deploy a containerized weather simulator.
-2. Log simulated weather events in Azure Blob Storage.
-3. Monitor logs via Azure Monitor & Log Analytics.
-4. Trigger weather alerts on thresholds.
-5. Host dashboard on GitHub Pages.
-
----
-
-## 🔧 Prerequisites
-
-* Azure subscription (Pluralsight sandbox or personal)
-* GitHub repo (e.g., `cloudtopia-capstone`)
-* Azure CLI installed locally or use Cloud Shell
-
----
-
-## 📁 Repository Structure (in GitHub)
-
-```
-cloudtopia-capstone/
-├── .github/workflows/
-│   ├── deploy-infra.yaml     # Bicep deployment
-│   └── container-build.yaml  # Container build & push to ACR
-├── dashboard/
-│   └── index.html            # Weather dashboard
-├── infrastructure/
-│   └── main.bicep            # Azure resources definition
-└── weather-simulator/
-    ├── app.py                # Weather generator
-    └── Dockerfile            # Image builder
-```
-
----
-
-## 🚀 Step-by-Step Deployment
-
-### 1. Clone Your GitHub Repo
-
-```bash
-git clone https://github.com/your-username/cloudtopia-capstone.git
-cd cloudtopia-capstone
-```
-
-### 2. Build and Push Docker Image to ACR
-
-```bash
-# Log in to Azure and ACR
 az deployment group create --resource-group 1-f19e8a67-playground-sandbox --template-file infrastructure/main.bicep
 
 export RESOURCE_GROUP=$(az group list --query "[0].name" -o tsv)
