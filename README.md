@@ -59,6 +59,8 @@ cd weather-simulator
 
 az acr build --registry cloudtopiaregistry --image weather-simulator:latest .
 
+az acr credential show --name cloudtopiaregistry
+
 # Set ACR login server name (replace with your unique name if needed)
 ACR_NAME=cloudtopiaacr
 ACR_LOGIN_SERVER=$(az acr show --name $ACR_NAME --query loginServer --output tsv)
