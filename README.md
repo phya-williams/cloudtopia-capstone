@@ -55,7 +55,9 @@ export RESOURCE_GROUP=$(az group list --query "[0].name" -o tsv)
 
 az acr create --resource-group $RESOURCE_GROUP --name cloudtopiaregistry --sku Basic --admin-enabled true
 
-az containerapp env create --name cloudtopia-env --resource-group $RESOURCE_GROUP --location southcentralus
+cd weather-simulator
+
+az acr build --registry cloudtopiaregistry --image weather-simulator:latest .
 
 # Set ACR login server name (replace with your unique name if needed)
 ACR_NAME=cloudtopiaacr
