@@ -11,8 +11,8 @@ param appServicePlanName string = 'cloudtopia-plan'
 param webAppName string = 'cloudtopia-weather-app'
 param acrLoginServer string = 'cloudtopiaregistry.azurecr.io'
 param acrImageName string = 'cloudtopia-weather:latest'
-param acrUsername string = <acrUsername-here>
-param acrPassword string = <acrPassword-here>
+param acrUsername string = 'cloudtopiaregistry'
+param acrPassword string = 'O7+cwREaR4THMbHQnRFyfEkkndjsKqdXYE5+U64CMP+ACRDYcsmJ'
 
 
 var nsgName = '${vnetName}-nsg'
