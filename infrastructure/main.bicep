@@ -5,6 +5,8 @@ param vnetName string = 'cloudtopia-vnet'
 param subnetName string = 'weather-subnet'
 param vnetAddressPrefix string = '10.0.0.0/16'
 param subnetAddressPrefix string = '10.0.0.0/24'
+param workspaceName string = 'weatheranalytics'
+param appInsightsName string = 'weatherappinsights'
 
 var nsgName = '${vnetName}-nsg'
 
