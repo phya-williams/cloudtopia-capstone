@@ -1,8 +1,6 @@
 param location string = 'eastus'
 param storageAccountName string = 'cloudtopiablob2025'
 param containerName string = 'weatherdata'
-param functionAppName string = 'cloudtopia-weather-fuctions'
-
 param vnetName string = 'cloudtopia-vnet'
 param subnetName string = 'weather-subnet'
 param vnetAddressPrefix string = '10.0.0.0/16'
