@@ -7,6 +7,13 @@ param vnetAddressPrefix string = '10.0.0.0/16'
 param subnetAddressPrefix string = '10.0.0.0/24'
 param workspaceName string = 'weatheranalytics'
 param appInsightsName string = 'weatherappinsights'
+param appServicePlanName string = 'cloudtopia-plan'
+param webAppName string = 'cloudtopia-weather-app'
+param acrLoginServer string = 'cloudtopiaregistry.azurecr.io'
+param acrImageName string = 'cloudtopia-weather:latest'
+param acrUsername string = <acrUsername-here>
+param acrPassword string = <acrPassword-here>
+
 
 var nsgName = '${vnetName}-nsg'
 
@@ -91,5 +98,50 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   properties: {
     Application_Type: 'web'
     WorkspaceResourceId: logAnalytics.id
+  }
+}
+
+resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
+  name: appServicePlanName
+  location: location
+  sku: {
+    name: 'B1'
+    tier: 'Basic'
+  }
+  kind: 'linux'
+  properties: {
+    reserved: true
+  }
+}
+
+resource webApp 'Microsoft.Web/sites@2022-03-01' = {
+  name: webAppName
+  location: location
+  kind: 'app,linux,container'
+  properties: {
+    serverFarmId: appServicePlan.id
+    siteConfig: {
+      linuxFxVersion: 'DOCKER|${acrLoginServer}/${acrImageName}'
+      containerRegistryManagedIdentityClientId: ''
+      appSettings: [
+        {
+          name: 'DOCKER_REGISTRY_SERVER_URL'
+          value: 'https://${acrLoginServer}'
+        }
+        {
+          name: 'DOCKER_REGISTRY_SERVER_USERNAME'
+          value: acrUsername
+        }
+        {
+          name: 'DOCKER_REGISTRY_SERVER_PASSWORD'
+          value: acrPassword
+        }
+        {
+          name: 'WEBSITES_PORT'
+          value: '80'
+        }
+      ]
+    }
+    httpsOnly: true
   }
 }
