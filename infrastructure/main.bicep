@@ -9,9 +9,7 @@ param workspaceName string = 'weatheranalytics'
 param appInsightsName string = 'weatherappinsights'
 param appServicePlanName string = 'cloudtopia-plan'
 param webAppName string = 'cloudtopia-weather-app'
-param acrLoginServer string = 'cloudtopiaregistry.azurecr.io'
-param acrImageName string = 'cloudtopia-weather:latest'
-param acrUsername string = 'cloudtopiaregistry'
+
 
 @secure()
 param acrPassword string = 'we0Ut26glnzpzT/RoygeAodkKkXc0aD1OArJe6GCj5+ACRBTCjNN'
@@ -119,24 +117,12 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
 resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   name: webAppName
   location: location
-  kind: 'app,linux,container'
+  kind: 'app,linux'
   properties: {
     serverFarmId: appServicePlan.id
     siteConfig: {
-      linuxFxVersion: 'DOCKER|${acrLoginServer}/${acrImageName}'
+      linuxFxVersion: 'NODE|18-lts'
       appSettings: [
-        {
-          name: 'DOCKER_REGISTRY_SERVER_URL'
-          value: 'https://${acrLoginServer}'
-        }
-        {
-          name: 'DOCKER_REGISTRY_SERVER_USERNAME'
-          value: acrUsername
-        }
-        {
-          name: 'DOCKER_REGISTRY_SERVER_PASSWORD'
-          value: acrPassword
-        }
         {
           name: 'WEBSITES_PORT'
           value: '80'
