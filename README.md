@@ -53,6 +53,9 @@ cd cloudtopia-capstone
 export RESOURCE_GROUP=$(az group list --query "[0].name" -o tsv)
 az acr create --resource-group $RESOURCE_GROUP --name cloudtopiaregistry --sku Basic --admin-enabled true
 az acr credential show --name cloudtopiaregistry
+
+# Change Password in Bicep script!
+
 az deployment group create --resource-group $RESOURCE_GROUP --template-file infrastructure/main.bicep
 cd weather-simulator
 az acr build --registry cloudtopiaregistry --image weather-simulator:latest .
