@@ -14,7 +14,7 @@ param acrImageName string = 'cloudtopia-weather:latest'
 param acrUsername string = 'cloudtopiaregistry'
 
 @secure()
-param acrPassword string = 'O7+cwREaR4THMbHQnRFyfEkkndjsKqdXYE5+U64CMP+ACRDYcsmJ'
+param acrPassword string = 'we0Ut26glnzpzT/RoygeAodkKkXc0aD1OArJe6GCj5+ACRBTCjNN'
 
 
 var nsgName = '${vnetName}-nsg'
