@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy container app to Azure Web App - cloudtopia-weather-app
+name: Build and deploy Node.js app to Azure Web App - cloudtopia-weather-app
 
 on:
   push:
@@ -11,41 +11,54 @@ on:
 
 jobs:
   build:
-    runs-on: 'ubuntu-latest'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      - name: Set up Node.js version
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
 
-    - name: Log in to registry
-      uses: docker/login-action@v2
-      with:
-        registry: https://cloudtopiaregistry.azurecr.io/
-        username: ${{ secrets.AzureAppService_ContainerUsername_edef961717c241419e26aed7b772a72b }}
-        password: ${{ secrets.AzureAppService_ContainerPassword_d35f6bcc98a54172b1023dee799922e5 }}
+      - name: npm install, build, and test
+        run: |
+          npm install
+          npm run build --if-present
+          npm run test --if-present
 
-    - name: Build and push container image to registry
-      uses: docker/build-push-action@v3
-      with:
-        push: true
-        tags: cloudtopiaregistry.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_edef961717c241419e26aed7b772a72b }}/cloudtopia-weather:${{ github.sha }}
-        file: ./Dockerfile
+      - name: Zip artifact for deployment
+        run: zip release.zip ./* -r
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app
+          path: release.zip
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: 'production'
+      name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-
+    
     steps:
-    - name: Deploy to Azure Web App
-      id: deploy-to-webapp
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: 'cloudtopia-weather-app'
-        slot-name: 'production'
-        publish-profile: ${{ secrets.AzureAppService_PublishProfile_7fe3ff5a317f4145bcb0e337985cf8b4 }}
-        images: 'cloudtopiaregistry.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_edef961717c241419e26aed7b772a72b }}/cloudtopia-weather:${{ github.sha }}'
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip
+      
+      - name: 'Deploy to Azure Web App'
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'cloudtopia-weather-app'
+          slot-name: 'Production'
+          package: .
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_6D93E3610A0B447AAA21AFD6F65A3A72 }}
