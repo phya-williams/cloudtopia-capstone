@@ -61,4 +61,4 @@ jobs:
           app-name: 'cloudtopia-weather-app'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_6D93E3610A0B447AAA21AFD6F65A3A72 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9270FFEA02E845DC8EE54E2530D4703E }}
