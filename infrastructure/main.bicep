@@ -97,34 +97,37 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
+resource servicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: appServicePlanName
   location: location
   sku: {
-    name: 'B1'
-    tier: 'Basic'
+    name: 'F1' // Free Tier
+    tier: 'Free'
   }
-  kind: 'linux'
+  kind: 'app'
   properties: {
-    reserved: true
+    reserved: false
   }
 }
 
 resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   name: webAppName
   location: location
-  kind: 'app,linux'
+  kind: 'app'
   properties: {
-    serverFarmId: appServicePlan.id
+    serverFarmId: servicePlan.id
+    httpsOnly: true
     siteConfig: {
-      linuxFxVersion: 'NODE|18-lts'
+      defaultDocuments: [
+        'index.html'
+      ]
+      linuxFxVersion: ''
       appSettings: [
         {
-          name: 'WEBSITES_PORT'
-          value: '80'
+          name: 'WEBSITE_RUN_FROM_PACKAGE'
+          value: '1'
         }
       ]
     }
-    httpsOnly: true
   }
 }
