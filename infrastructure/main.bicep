@@ -11,10 +11,6 @@ param appServicePlanName string = 'cloudtopia-plan'
 param webAppName string = 'cloudtopia-weather-app'
 
 
-@secure()
-param acrPassword string = 'we0Ut26glnzpzT/RoygeAodkKkXc0aD1OArJe6GCj5+ACRBTCjNN'
-
-
 var nsgName = '${vnetName}-nsg'
 
 // Storage Account
