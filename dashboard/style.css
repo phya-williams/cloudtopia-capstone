@@ -1,0 +1,22 @@
+body {
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  margin: 0; background: #e0f7fa; color: #01579b;
+}
+header {
+  background: #0288d1; color: white; padding: 1rem;
+  text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+main {
+  padding: 1rem;
+}
+#weather-table {
+  :contentReference[oaicite:1]{index=1}
+}
+#weather-table th {
+  :contentReference[oaicite:2]{index=2}
+}
+#weather-table td {
+  :contentReference[oaicite:3]{index=3}
+  :contentReference[oaicite:4]{index=4}
+}
+#weather-table tr:nth-child(even) { background: #b3e5fc; }
