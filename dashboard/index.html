@@ -1,32 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>CloudTopia Weather Logs</title>
-  <style>
-    body { font-family: Arial; background: #eef; padding: 2em; }
-    h1 { color: #3366cc; }
-    pre { background: #fff; border: 1px solid #ccc; padding: 1em; max-height: 300px; overflow: auto; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CloudTopia Weather Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>🌤 CloudTopia Weather Logs</h1>
-  <div id="logDisplay">Loading logs...</div>
-
-  <script>
-    async function loadLogs() {
-      const containerUrl = "https://<storage-account>.blob.core.windows.net/weather-logs";
-      const filenames = ["sample-log-1.json", "sample-log-2.json", "sample-log-3.json", "sample-log-4.json", "sample-log-5.json"];
-
-      const logDisplay = document.getElementById("logDisplay");
-      logDisplay.innerHTML = "";
-
-      for (let name of filenames) {
-        const res = await fetch(`${containerUrl}/${name}`);
-        const text = await res.text();
-        logDisplay.innerHTML += `<h3>${name}</h3><pre>${text}</pre>`;
-      }
-    }
-    loadLogs();
-  </script>
+  <header>
+    <h1>☁️ CloudTopia Weather Dashboard</h1>
+  </header>
+  <main>
+    <table id="weather-table">
+      <thead>
+        <tr><th>Timestamp</th><th>Temp (°C)</th><th>Humidity (%)</th><th>Wind Speed (m/s)</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+  <script src="script.js"></script>
 </body>
 </html>
