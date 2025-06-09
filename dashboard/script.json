@@ -1,0 +1,46 @@
+import { BlobServiceClient } from "@azure/storage-blob";
+
+const blobServiceClient = new BlobServiceClient(
+  "https://<YOUR_ST_ACCOUNT>.blob.core.windows.net?<SAS_TOKEN>"
+);
+const containerClient = blobServiceClient.getContainerClient("<YOUR_CONTAINER>");
+
+async function fetchLogs() {
+  const rows = [];
+  for await (const blob of containerClient.listBlobsFlat({ prefix: "" })) {
+    const blobClient = containerClient.getBlobClient(blob.name);
+    const content = await blobClient.downloadToBuffer();
+    try {
+      const json = JSON.parse(content.toString());
+      rows.push(json);
+    } catch (_) {}
+  }
+  return rows.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
+
+function updateTable(logs) {
+  const tbody = document.querySelector("#weather-table tbody");
+  tbody.innerHTML = "";
+  logs.forEach(log => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${new Date(log.timestamp).toLocaleString()}</td>
+      <td>${log.temperature.toFixed(1)}</td>
+      <td>${log.humidity.toFixed(1)}</td>
+      <td>${log.windSpeed.toFixed(1)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function refresh() {
+  try {
+    const logs = await fetchLogs();
+    updateTable(logs);
+  } catch (e) {
+    console.error("Fetch error", e);
+  }
+}
+
+refresh();
+setInterval(refresh, 4000);
