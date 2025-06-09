@@ -1,7 +1,7 @@
 import { BlobServiceClient } from "@azure/storage-blob";
 
 const blobServiceClient = new BlobServiceClient(
-  "https://<YOUR_ST_ACCOUNT>.blob.core.windows.net?<SAS_TOKEN>"
+  "https://cloudtopiablob2025.blob.core.windows.net/weatherdata?sp=r&st=2025-06-09T21:05:49Z&se=2025-06-10T05:05:49Z&spr=https&sv=2024-11-04&sr=c&sig=MWgxb4Nr0Gyvc3Ra%2FJ4opcwDpJUY4X3RKL1tk0h%2FhoI%3D"
 );
 const containerClient = blobServiceClient.getContainerClient("<YOUR_CONTAINER>");
 
