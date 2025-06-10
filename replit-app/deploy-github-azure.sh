@@ -38,7 +38,7 @@ echo "🔧 Configuring GitHub deployment..."
 az webapp deployment source config \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
-  --repo-url https://github.com/phya-williams/cloudtopia-capstone \
+  --repo-url https://github.com/phya-williams/cloudtopia-capstone/replit-app \
   --branch main \
   --manual-integration
 
