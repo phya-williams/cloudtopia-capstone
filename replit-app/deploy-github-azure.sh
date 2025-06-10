@@ -9,7 +9,7 @@ echo "🌤️  CloudTopia Weather Dashboard - Azure Deployment"
 echo "=================================================="
 
 # Get resource group (auto-detect sandbox environment)
-RESOURCE_GROUP=$(az group list --query "[0].name" -o tsv)
+export RESOURCE_GROUP=$(az group list --query "[0].name" -o tsv)
 LOCATION=$(az group show --name $RESOURCE_GROUP --query location -o tsv)
 APP_NAME="cloudtopia-weather-$(date +%s)"
 
