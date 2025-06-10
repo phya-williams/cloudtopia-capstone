@@ -11,7 +11,7 @@ echo "=================================================="
 # Get resource group (auto-detect sandbox environment)
 export RESOURCE_GROUP=$(az group list --query "[0].name" -o tsv)
 LOCATION=$(az group show --name $RESOURCE_GROUP --query location -o tsv)
-APP_NAME="cloudtopia-weather-$(date +%s)"
+APP_NAME="cloudtopia-weather-2025"
 
 echo "📍 Detected Resource Group: $RESOURCE_GROUP"
 echo "📍 Location: $LOCATION"
