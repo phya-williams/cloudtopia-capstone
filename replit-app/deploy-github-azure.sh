@@ -33,14 +33,16 @@ az webapp create \
   --plan "$APP_NAME-plan" \
   --runtime "NODE:18-lts"
 
-# Configure GitHub deployment
-echo "🔧 Configuring GitHub deployment..."
-az webapp deployment source config \
+# Zip and upload your dashboard (replace path)
+cd /home/cloud/cloudtopia-capstone/replit-app
+zip -r cloudtopia.zip .
+
+# Deploy to web app
+az webapp deployment source config-zip \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
-  --repo-url https://github.com/phya-williams/cloudtopia-capstone/replit-app \
-  --branch main \
-  --manual-integration
+  --src cloudtopia.zip
+
 
 # Set environment variables
 echo "🔧 Setting environment variables..."
