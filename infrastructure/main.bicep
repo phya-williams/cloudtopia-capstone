@@ -8,7 +8,7 @@ param subnetAddressPrefix string = '10.0.0.0/24'
 param workspaceName string = 'weatheranalytics'
 param appInsightsName string = 'weatherappinsights'
 param appServicePlanName string = 'cloudtopia-plan'
-param webAppName string = 'cloudtopia-weather-app'
+
 
 
 var nsgName = '${vnetName}-nsg'
@@ -110,24 +110,3 @@ resource servicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   }
 }
 
-resource webApp 'Microsoft.Web/sites@2022-03-01' = {
-  name: webAppName
-  location: location
-  kind: 'app'
-  properties: {
-    serverFarmId: servicePlan.id
-    httpsOnly: true
-    siteConfig: {
-      defaultDocuments: [
-        'index.html'
-      ]
-      linuxFxVersion: ''
-      appSettings: [
-        {
-          name: 'WEBSITE_RUN_FROM_PACKAGE'
-          value: '1'
-        }
-      ]
-    }
-  }
-}
