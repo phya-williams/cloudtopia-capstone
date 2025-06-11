@@ -8,6 +8,7 @@ param subnetAddressPrefix string = '10.0.0.0/24'
 param workspaceName string = 'weatheranalytics'
 param appInsightsName string = 'weatherappinsights'
 param appServicePlanName string = 'cloudtopia-plan'
+param webAppName string = 'cloudtopia-dashboard'
 
 
 
@@ -110,3 +111,36 @@ resource servicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   }
 }
 
+resource nodeWebApp 'Microsoft.Web/sites@2022-03-01' = {
+  name: webAppName
+  location: location
+  kind: 'app,linux'
+  properties: {
+    serverFarmId: servicePlan.id
+    siteConfig: {
+      linuxFxVersion: 'NODE|18-lts'  // Use Azure’s built-in Node.js runtime
+      appSettings: [
+        {
+          name: 'WEBSITES_ENABLE_APP_SERVICE_STORAGE'
+          value: 'true'
+        }
+        {
+          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
+          value: 'true'
+        }
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: appInsights.properties.InstrumentationKey
+        }
+      ]
+    }
+    httpsOnly: true
+  }
+  identity: {
+    type: 'SystemAssigned'
+  }
+  dependsOn: [
+    servicePlan
+    appInsights
+  ]
+}
