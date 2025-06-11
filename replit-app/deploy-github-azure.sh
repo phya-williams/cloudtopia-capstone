@@ -34,7 +34,7 @@ az webapp create \
   --runtime "NODE:18-lts"
 
 # Zip and upload your dashboard (replace path)
-cd /home/cloud/cloudtopia-capstone/replit-app
+cd /home/cloud/cloudtopia-replit-2
 zip -r cloudtopia.zip .
 
 # Deploy to web app
