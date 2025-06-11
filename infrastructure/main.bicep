@@ -118,22 +118,22 @@ resource nodeWebApp 'Microsoft.Web/sites@2022-03-01' = {
   properties: {
     serverFarmId: servicePlan.id
     siteConfig: {
-      linuxFxVersion: 'NODE|18-lts'  // Use Azure’s built-in Node.js runtime
-      appSettings: [
-        {
-          name: 'WEBSITES_ENABLE_APP_SERVICE_STORAGE'
-          value: 'true'
-        }
-        {
-          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-          value: 'true'
-        }
-        {
-          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-          value: appInsights.properties.InstrumentationKey
-        }
-      ]
+  linuxFxVersion: 'NODE|18-lts'
+  appSettings: [
+    {
+      name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
+      value: 'true'
     }
+    {
+      name: 'WEBSITES_ENABLE_APP_SERVICE_STORAGE'
+      value: 'true'
+    }
+    {
+      name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+      value: appInsights.properties.InstrumentationKey
+    }
+  ]
+}
     httpsOnly: true
   }
   identity: {
