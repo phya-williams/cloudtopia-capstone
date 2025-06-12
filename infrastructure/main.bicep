@@ -102,14 +102,15 @@ resource servicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: appServicePlanName
   location: location
   sku: {
-    name: 'F1' // Free Tier
-    tier: 'Free'
+    name: 'B1'     // ✅ Use Basic B1 (Linux compatible)
+    tier: 'Basic'
   }
-  kind: 'app'
+  kind: 'linux'     // ✅ Must be 'linux' for Linux App Services
   properties: {
-    reserved: false
+    reserved: true  // ✅ Must be true for Linux App Service
   }
 }
+
 
 resource nodeWebApp 'Microsoft.Web/sites@2022-03-01' = {
   name: webAppName
