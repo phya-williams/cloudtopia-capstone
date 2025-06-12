@@ -43,6 +43,8 @@ cloudtopia-capstone/
 ```bash
 git clone https://github.com/phya-williams/cloudtopia-capstone.git
 cd cloudtopia-capstone
+export RESOURCE_GROUP=$(az group list --query "[0].name" -o tsv)
+az deployment group create --resource-group $RESOURCE_GROUP --template-file infrastructure/main.bicep
 ```
 
 ### 2. Build and Push Docker Image to ACR
